@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Platform Profile Notifications
+Comment=Show Linux platform-profile changes
+TryExec=platform-profile-osd
+Exec=platform-profile-osd
+Terminal=false
+X-GNOME-Autostart-enabled=true

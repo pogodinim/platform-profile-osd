@@ -1,0 +1,14 @@
+[Unit]
+Description=Linux platform-profile notifications
+After=graphical-session.target
+PartOf=graphical-session.target
+ConditionPathExists=/sys/firmware/acpi/platform_profile
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/platform-profile-osd
+Restart=on-failure
+RestartSec=3s
+
+[Install]
+WantedBy=graphical-session.target
