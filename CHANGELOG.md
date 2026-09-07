@@ -7,17 +7,6 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-
-- Defaulted startup notifications, optional audio, and notification replacement
-  to disabled.
-- Clarified pre-install runtime audio versus bundled sounds in installer output.
-
-### Added
-
-- Configurable `notify_on_startup` behavior.
-- Daemon-only per-session duplicate-instance protection.
-
 ## [0.1.0] - 2026-09-02
 
 ### Added
@@ -29,3 +18,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Compatibility diagnostics, CLI test actions, and quiet/verbose logging.
 - systemd graphical-session integration plus XDG autostart fallback.
 - User-local installer, conservative uninstaller, tests, and documentation.
+- Configurable `notify_on_startup` behavior.
+- Daemon-only per-session duplicate-instance protection.
+
+### Changed
+
+- Defaulted startup notifications, optional audio, and notification replacement
+  to disabled.
+- Clarified pre-install runtime audio versus bundled sounds in installer output.

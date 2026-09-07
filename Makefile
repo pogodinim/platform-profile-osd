@@ -12,6 +12,11 @@ TARGET := $(BUILD_DIR)/platform-profile-osd
 SOURCES := src/main.c src/config.c src/profile.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
 TEST_TARGET := $(BUILD_DIR)/test-unit
+TEST_BASH_SCRIPTS := install.sh uninstall.sh \
+	tests/test-install.sh tests/test-service.sh
+TEST_SH_SCRIPTS := tests/test-cli.sh tests/test-systemd-unit.sh
+TEST_DESKTOP_FILES := autostart/platform-profile-osd.desktop
+TEST_SYSTEMD_UNITS := systemd/platform-profile-osd.service
 
 .PHONY: all clean test check
 
@@ -32,6 +37,16 @@ $(TEST_TARGET): tests/test-unit.c src/config.c src/profile.c | $(BUILD_DIR)
 test: $(TARGET) $(TEST_TARGET)
 	$(TEST_TARGET)
 	sh tests/test-cli.sh $(TARGET)
+	@for script in $(TEST_BASH_SCRIPTS); do \
+		printf 'Checking Bash syntax: %s\n' "$$script"; \
+		bash -n "$$script" || exit $$?; \
+	done
+	@for script in $(TEST_SH_SCRIPTS); do \
+		printf 'Checking POSIX shell syntax: %s\n' "$$script"; \
+		sh -n "$$script" || exit $$?; \
+	done
+	desktop-file-validate $(TEST_DESKTOP_FILES)
+	sh tests/test-systemd-unit.sh $(TARGET) $(TEST_SYSTEMD_UNITS)
 
 check: test
 

@@ -92,6 +92,12 @@ Build dependencies:
 - libsystemd development headers (`libsystemd-dev` on Debian/Ubuntu,
   `systemd-libs` plus headers on Arch-derived systems).
 
+Additional test dependencies:
+
+- Bash, for syntax-checking the Bash installer and integration scripts;
+- `desktop-file-validate` from `desktop-file-utils`; and
+- `systemd-analyze` from systemd.
+
 ## Installation
 
 From a checked-out source tree:

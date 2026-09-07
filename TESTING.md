@@ -25,8 +25,9 @@ Coverage includes:
 - rejection of conflicting CLI actions;
 - startup-notification and audio defaults;
 - daemon-only single-instance locking while read-only CLI actions remain usable;
-- missing `pw-play` and missing mapped-sound CLI behavior; and
-- shell syntax checks for every maintained script.
+- missing `pw-play` and missing mapped-sound CLI behavior;
+- shell syntax checks for every maintained script; and
+- validation of the maintained XDG desktop entry and systemd user unit.
 
 The CLI tests use a temporary synthetic sysfs directory only for read commands.
 They do not claim that regular files reproduce kernfs `EPOLLPRI` behavior.
