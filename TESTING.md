@@ -73,6 +73,7 @@ Record the kernel, desktop, session type, and exposed choices before testing.
 - [ ] notification daemon restart/recovery
 - [ ] PipeWire restart/recovery
 - [x] user-service start, unexpected-failure restart, and stop
+- [x] reboot/login automatic startup and physical profile-key acceptance
 - [ ] graphical-session target start/stop relationship
 - [x] idle CPU and wakeup observation
 - [ ] migration and rollback rehearsal
@@ -124,13 +125,59 @@ systemd service in both slow and rapid sequences. The replacement timing test
 was completed and failed only for expired notification IDs, so replacement is
 now disabled by default.
 
-Handoff state: the new service file, binary, sounds, and sound-enabled live-test
-configuration are installed. The service is `enabled` and `active`, startup
-notifications and notification replacement are disabled, and the legacy ASUS
-process is not running. The legacy files remain present and unchanged pending
-the controlled migration/reboot step. Do not log out or reboot in this state:
-either reversibly disable the legacy autostart entry first or disable the new
-service so both notifiers cannot start at the next login.
+## Pre-reboot checkpoint — 2026-09-07
+
+Ran `./install.sh --method=systemd` from commit `4fb2441`. The installed binary
+and service file match the source checkout. The service is `enabled` and
+`active`, with exactly one daemon, zero restarts, and no errors in the
+current-boot service journal. `graphical-session.target` is active and
+`--check` reports the kernel interface, notification API, and optional audio
+available. Existing configuration is unchanged: audio is enabled, while startup
+notifications and notification replacement are disabled.
+
+The earlier rename to `asus-profile-notify.desktop.disabled` inside the
+autostart directory did not prevent startup on this host: the autostart
+generator created a service for that file and launched the legacy notifier.
+Stopped that specific legacy service and moved its entry to
+`~/.config/autostart-disabled/asus-profile-notify.desktop`. After reloading the
+user manager, the old generated unit is `not-found` and no legacy notifier is
+running. The legacy executable, moved desktop entry, and three legacy WAV files
+all match their saved SHA-256 hashes; the user configuration hash also matches.
+
+Reboot/login and physical profile-switching acceptance checks were deferred
+at this checkpoint; their later results are recorded below.
+No reboot, logout, profile change, or restart of desktop/audio infrastructure
+was performed during this checkpoint.
+
+## Post-reboot acceptance — 2026-09-08
+
+Verified a new boot on Linux `7.2.3-1-cachyos`, starting at 09:16:45 CEST.
+The enabled service started at 09:17:05 CEST, at the same time as
+`graphical-session.target`, and remained active with exactly one daemon and
+zero restarts when checked at 11:11 CEST. The current-boot journal contains
+no service errors; the previous boot's journal records a clean service stop.
+No manual service start or restart was performed during this verification.
+
+The legacy notifier did not start. Its desktop entry remains outside the
+autostart directory at
+`~/.config/autostart-disabled/asus-profile-notify.desktop`. The legacy binary,
+desktop entry, and WAV hashes match the saved baseline, and the configuration
+hash is unchanged. The installed binary, service, and bundled sounds match the
+checkout. `--check` reports the profile interface, Plasma notification API,
+and configured optional audio available.
+
+The user cycled the physical M4 key through Quiet, Balanced, and Performance
+and confirmed exactly one popup and the matching sound for each profile.
+Passive D-Bus monitoring captured exactly three `Notify` calls in that order
+at 11:14:51–11:14:52 CEST, all from sender `:1.67`, mapped to the installed
+daemon (PID 1869). Each call used replacement ID zero. The final raw profile
+was `performance`; the same single daemon remained enabled and active with
+zero restarts and no new journal errors after the test.
+
+Reboot/login acceptance passed, including automatic startup, physical profile
+changes, user-confirmed popup/audio behavior, and preserved-file integrity.
+The separate rollback rehearsal and deliberate notification/audio-service
+recovery checks have not been performed and remain unchecked.
 
 ## Controlled notification-replacement test
 
