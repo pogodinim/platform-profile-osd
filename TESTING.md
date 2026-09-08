@@ -76,7 +76,7 @@ Record the kernel, desktop, session type, and exposed choices before testing.
 - [x] reboot/login automatic startup and physical profile-key acceptance
 - [ ] graphical-session target start/stop relationship
 - [x] idle CPU and wakeup observation
-- [ ] migration and rollback rehearsal
+- [x] migration and rollback rehearsal
 
 Results for the initial development machine are filled in before publication.
 
@@ -115,11 +115,13 @@ Strix SCAR 17 G733PZ. Exposed choices were `quiet balanced performance`.
 | Idle observation | 0 CPU ticks and 0 context switches over 10 seconds; 0.0% CPU, 2796 KiB RSS, one thread |
 | Original working installation integrity | Pass; paths, timestamps, and SHA-256 hashes remained unchanged |
 
-Not performed against live desktop infrastructure: deliberately restarting
+At the end of the September 2 testing, the following had not been performed:
+deliberately restarting
 Plasma's notification service or PipeWire, stopping the real
 `graphical-session.target`, and a reboot/login cycle. Those actions would
 disrupt the working session. Recovery behavior was instead exercised with
 transient and installed units, missing backends, and retry-safe code paths.
+The later reboot/login and rollback results are recorded separately below.
 Combined notification-plus-audio physical changes passed under the installed
 systemd service in both slow and rapid sequences. The replacement timing test
 was completed and failed only for expired notification IDs, so replacement is
@@ -176,8 +178,87 @@ zero restarts and no new journal errors after the test.
 
 Reboot/login acceptance passed, including automatic startup, physical profile
 changes, user-confirmed popup/audio behavior, and preserved-file integrity.
-The separate rollback rehearsal and deliberate notification/audio-service
-recovery checks have not been performed and remain unchecked.
+Rollback was still pending at this stage; the completed rehearsal is recorded
+below. Deliberate notification/audio-service recovery checks remain untested.
+
+## Rollback rehearsal — 2026-09-08
+
+Completed a live switch from the new notifier to the preserved legacy ASUS
+notifier, followed by restoration of the new notifier. The rehearsal used
+the existing installed files; neither implementation was uninstalled. A guard
+restored the new service on script exit, interruption, or a five-minute timeout
+while waiting for the legacy physical-key check.
+
+| Phase | Observed result |
+| --- | --- |
+| Stop new notifier | At 11:30:19 CEST, disabled and stopped `platform-profile-osd.service`; verified no new daemon remained. |
+| Restore legacy startup | Moved the preserved desktop entry back to `~/.config/autostart/asus-profile-notify.desktop` and reloaded the user manager. The generated unit's `SourcePath` matched that entry. Started `app-asus\x2dprofile\x2dnotify@autostart.service`; exactly one legacy process ran (PID 26353). |
+| Test legacy behavior | At 11:30:38–11:30:39 CEST, captured exactly three legacy `Notify` calls: `QUIET → BALANCED → PERFORMANCE`. The user confirmed one popup and the matching sound for each physical M4 change. |
+| Restore new notifier | Stopped the legacy unit at 11:31:14 CEST, moved its desktop entry back outside autostart, and reloaded the user manager. The legacy unit became `not-found`. Enabled and started the new service at 11:31:15 CEST. |
+| Test restored behavior | At 11:31:43–11:31:44 CEST, captured exactly three new `Notify` calls: `Quiet → Balanced → Performance`, from sender `:1.149`, mapped to PID 27181. The user confirmed one popup and the matching sound for each change. |
+
+Final state: the new service is enabled and active with exactly one process,
+zero restarts, and no journal errors. The legacy notifier is stopped, and its
+entry is preserved at
+`~/.config/autostart-disabled/asus-profile-notify.desktop`. SHA-256 comparisons
+before and after the round trip confirmed unchanged contents for the legacy
+executable, desktop entry and three sounds, the user configuration, and the new
+executable, service file and three bundled sounds. `--check` passed after
+restoration. The final profile was `performance`, as before the rehearsal.
+
+### Procedure used on the development machine
+
+These paths and the generated legacy unit name apply to this machine's default
+XDG directories. Before each move, verify the source exists and the destination
+does not exist. Do not overwrite an existing entry. Check each stop completes
+and that its notifier process exits before starting the other implementation.
+
+To switch to the legacy notifier:
+
+```bash
+systemctl --user disable --now platform-profile-osd.service
+mv -n -- ~/.config/autostart-disabled/asus-profile-notify.desktop \
+    ~/.config/autostart/asus-profile-notify.desktop
+systemctl --user daemon-reload
+systemctl --user start 'app-asus\x2dprofile\x2dnotify@autostart.service'
+```
+
+To return to the new notifier:
+
+```bash
+systemctl --user stop 'app-asus\x2dprofile\x2dnotify@autostart.service'
+mv -n -- ~/.config/autostart/asus-profile-notify.desktop \
+    ~/.config/autostart-disabled/asus-profile-notify.desktop
+systemctl --user daemon-reload
+systemctl --user enable --now platform-profile-osd.service
+```
+
+Verify the resulting service state, one notifier process, notifications/audio,
+and preserved-file hashes after either switch. Keeping a renamed `.disabled`
+file inside the autostart directory is not sufficient on this host. This
+rehearsal verified the restored legacy entry's generated unit and live behavior;
+it did not include another login while the legacy configuration was restored.
+
+## Recovery scenarios not yet validated
+
+The following remain explicit validation gaps. Successful startup, normal
+shutdown, missing-backend tests, and a successful rollback do not establish
+recovery from these events. Keep the corresponding hardware checklist items
+unchecked until the actual scenarios are exercised and recorded.
+
+| Scenario | Existing evidence and remaining check |
+| --- | --- |
+| Notification server crash/restart | Normal Plasma notifications passed. Verify that notifications resume on a subsequent profile change after the notification server returns, without manually restarting the notifier. |
+| Session D-Bus disconnect/restart | Code closes its connection on selected transport errors and reconnects on a subsequent notification attempt. Live loss and restoration of the session bus, including service survival and reconnection, have not been exercised. |
+| PipeWire restart/recovery | Missing `pw-play`, missing sounds, and an unavailable remote were non-fatal in earlier tests. Verify actual playback failure during a PipeWire restart and matching audio on subsequent profile changes after recovery. |
+| Deliberate stop/start of `graphical-session.target` | Transient `PartOf=` tests and real boot/shutdown logs passed. Explicitly stopping and restarting the real graphical target in a live session was not tested; it can disrupt desktop applications. |
+| Suspend/resume | Verify the watcher, notification connection, and optional audio after resume, including the first profile change. No suspend/resume acceptance test was performed. |
+| Kernel profile-interface removal/recreation | Missing files are covered by automated tests. Live driver reset or sysfs removal/recreation, followed by restoration of monitoring and any systemd restart-limit effects, has not been tested. |
+
+Schedule disruptive desktop/audio recovery tests separately when other work
+can be interrupted. Record the actual interruption, recovery sequence, process
+and restart counts, journal messages, and observed popup/audio results. Source
+inspection alone is not a passing recovery test.
 
 ## Controlled notification-replacement test
 

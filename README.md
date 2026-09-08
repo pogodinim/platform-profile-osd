@@ -340,6 +340,9 @@ diagnostics, and simple user-local installation.
   `graphical-session.target`; XDG autostart is the fallback.
 - Notification appearance and timeout policy are ultimately controlled by the
   user's notification server.
+- Recovery after notification-server, session-bus, or PipeWire restarts,
+  suspend/resume, and live kernel-interface removal has not yet been validated.
+  See [untested recovery scenarios](TESTING.md#recovery-scenarios-not-yet-validated).
 - Only the hardware listed above has been tested by this project so far.
 
 ## License
