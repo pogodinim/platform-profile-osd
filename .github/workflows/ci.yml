@@ -16,9 +16,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            dbus-daemon \
             desktop-file-utils \
             libsystemd-dev \
             pkg-config \
+            python3 \
             systemd
       - name: Build
         run: make

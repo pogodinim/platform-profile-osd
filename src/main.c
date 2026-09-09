@@ -277,6 +277,7 @@ static int acquire_daemon_lock(char *path, size_t path_size, int *lock_fd)
 static void notifier_close(struct notifier *notifier)
 {
     notifier->bus = sd_bus_unref(notifier->bus);
+    notifier->notification_id = 0;
 }
 
 static int notifier_connect(struct notifier *notifier)
@@ -330,8 +331,8 @@ done:
     return result;
 }
 
-static int notifier_send(struct notifier *notifier, const char *body,
-                         int timeout_ms, int replace)
+static int notifier_send_once(struct notifier *notifier, const char *body,
+                              int timeout_ms, int replace)
 {
     sd_bus_error error = SD_BUS_ERROR_NULL;
     sd_bus_message *message = NULL;
@@ -383,9 +384,25 @@ done:
     sd_bus_error_free(&error);
     sd_bus_message_unref(message);
     sd_bus_message_unref(reply);
-    if (result == -ECONNRESET || result == -ENOTCONN || result == -EPIPE ||
-        result == -ESHUTDOWN)
+    return result;
+}
+
+static int notifier_send(struct notifier *notifier, const char *body,
+                         int timeout_ms, int replace)
+{
+    int result = 0;
+    int attempt;
+
+    /* A bus can restart while we are idle. Retry this notification once on a
+     * fresh connection instead of losing the first profile change afterward.
+     * Timeouts and server errors are not retried: delivery may have occurred. */
+    for (attempt = 0; attempt < 2; attempt++) {
+        result = notifier_send_once(notifier, body, timeout_ms, replace);
+        if (result != -ECONNRESET && result != -ENOTCONN && result != -EPIPE &&
+            result != -ESHUTDOWN)
+            break;
         notifier_close(notifier);
+    }
     return result;
 }
 

@@ -27,6 +27,8 @@ Coverage includes:
 - daemon-only single-instance locking while read-only CLI actions remain usable;
 - uninstaller service ownership, configuration/unrelated-file preservation,
   and refusal to remove files after an owned service fails to stop;
+- isolated notification-service and D-Bus recovery using the production
+  notification callback, including first-send recovery and timeout handling;
 - missing `pw-play` and missing mapped-sound CLI behavior;
 - shell syntax checks for every maintained script; and
 - validation of the maintained XDG desktop entry and systemd user unit.
@@ -331,6 +333,49 @@ Physical popup/audio and reboot acceptance remain supported by the September 8
 results. The recovery scenarios below remain untested. The changelog release
 date is still provisional; visibility, tagging, and publication remain pending.
 
+## Isolated notification and D-Bus recovery — 2026-09-09
+
+Run with Python 3 and `dbus-daemon` installed:
+
+```bash
+make test-recovery
+```
+
+The C helper compiles the actual notification code from `src/main.c` and calls
+the production profile-change callback with synthetic profile names. A Python
+driver owns a private D-Bus broker, mock notification server, and persistent
+client. Its bus configuration has no service-activation directories or desktop
+integration. The helper refuses an inherited desktop bus. User configuration
+is never loaded, audio is disabled, and the sysfs watcher is never started.
+
+The first run exposed a lost notification when the private bus restarted
+while the client was idle: the old connection failed, but reconnection only
+helped the next profile change. The fix retries the current notification once
+after a broken connection and resets the replacement ID. Timeouts and server
+errors are not retried because delivery may already have occurred.
+
+| Private test scenario | Result |
+| --- | --- |
+| Notification service absent at startup, then started | Pass: failures non-fatal, one warning per outage, subsequent delivery succeeds |
+| Notification server killed and restarted | Pass: outage warning resets after successful recovery |
+| Notification server restarted while client is idle | Pass: first subsequent notification delivered |
+| Private bus killed, sends attempted during outage, then broker/server restored | Pass: reconnection and delivery without restarting the client |
+| Private bus restarted while client is idle | Pass after fix: first subsequent notification delivered |
+| Server receives a notification but withholds its reply | Pass: bounded timeout, no retransmission, delivery resumes after server replacement |
+| Opt-in replacement across private-bus restart | Pass: replacement ID resets to zero on reconnect, then normal replacement resumes |
+
+All scenarios kept the same client process and checked received notification
+bodies and replacement IDs. Fresh-checkout `make -j4 test`, GCC static analysis
+with `-fanalyzer -Werror`, and Clang AddressSanitizer/UndefinedBehaviorSanitizer
+tests passed; leak detection was disabled for test-environment compatibility.
+
+These are component integration results, not visible Plasma popup acceptance
+or live session-bus recovery. The installed notifier, Plasma, session bus, and
+audio services retained their original PIDs, start times, states, and restart
+counts. All 11 installed/preserved files retained their hashes, modes, and
+modification times, and no private test processes remained. The installed
+binary was not replaced. Live recovery gaps remain listed below.
+
 ## Recovery scenarios not yet validated
 
 The following remain explicit validation gaps. Successful startup, normal
@@ -340,8 +385,8 @@ unchecked until the actual scenarios are exercised and recorded.
 
 | Scenario | Existing evidence and remaining check |
 | --- | --- |
-| Notification server crash/restart | Normal Plasma notifications passed. Verify that notifications resume on a subsequent profile change after the notification server returns, without manually restarting the notifier. |
-| Session D-Bus disconnect/restart | Code closes its connection on selected transport errors and reconnects on a subsequent notification attempt. Live loss and restoration of the session bus, including service survival and reconnection, have not been exercised. |
+| Notification server crash/restart | Private mock-server recovery passed above. Actual Plasma restart and visible popup recovery remain untested. |
+| Session D-Bus disconnect/restart | Private-bus loss/restoration and first-send recovery passed above with a persistent client. Actual desktop session-bus restart and full-daemon survival remain untested. |
 | PipeWire restart/recovery | Missing `pw-play`, missing sounds, and an unavailable remote were non-fatal in earlier tests. Verify actual playback failure during a PipeWire restart and matching audio on subsequent profile changes after recovery. |
 | Deliberate stop/start of `graphical-session.target` | Transient `PartOf=` tests and real boot/shutdown logs passed. Explicitly stopping and restarting the real graphical target in a live session was not tested; it can disrupt desktop applications. |
 | Suspend/resume | Verify the watcher, notification connection, and optional audio after resume, including the first profile change. No suspend/resume acceptance test was performed. |

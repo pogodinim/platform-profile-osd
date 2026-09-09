@@ -95,6 +95,7 @@ Build dependencies:
 Additional test dependencies:
 
 - Bash, for syntax-checking the Bash installer and integration scripts;
+- Python 3 and `dbus-daemon`, for private-bus notification recovery tests;
 - `desktop-file-validate` from `desktop-file-utils`; and
 - `systemd-analyze` from systemd.
 
@@ -266,6 +267,8 @@ Failure policy is intentionally simple:
   because there is nothing reliable to monitor;
 - configuration mistakes, notification failures, a missing audio backend, and
   missing/playback-failed sounds are logged and remain non-fatal;
+- a broken D-Bus connection is reopened and the current notification retried
+  once; timeouts and notification-server errors are not retried;
 - repeated notification/audio failures produce a single warning per outage or
   process lifetime rather than flooding the journal; and
 - a profile with an intentionally empty mapping is normal and silent.
@@ -321,6 +324,12 @@ Automated tests cover profile-label normalization, standard/default/unknown
 mapping behavior, configuration parsing, invalid mappings, raw profile reads,
 and core CLI behavior. Hardware event, notification, audio, systemd, idle CPU,
 and staged installer results are tracked in [TESTING.md](TESTING.md).
+
+`make test-recovery` runs just the isolated notification/D-Bus recovery tests.
+It creates a private bus and mock notification server, drives the production
+notification callback, and cleans up its own processes. It does not connect to
+the desktop bus, watch real sysfs, or play audio. These tests also run as part
+of `make test`.
 
 ## Prior art
 
