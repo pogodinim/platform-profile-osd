@@ -21,7 +21,7 @@ choices=$(PLATFORM_PROFILE_OSD_SYSFS_DIR="$test_root/sysfs" \
 [ "$choices" = 'quiet balanced future-ultra' ]
 
 version=$("$binary" --version)
-[ "$version" = 'platform-profile-osd 0.1.0' ]
+[ "$version" = 'platform-profile-osd 0.1.0-preview.1' ]
 
 "$binary" --help | grep -q -- '--no-sound'
 

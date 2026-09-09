@@ -1,7 +1,7 @@
 CC ?= cc
 PKG_CONFIG ?= pkg-config
 
-VERSION := 0.1.0
+VERSION := 0.1.0-preview.1
 CPPFLAGS += -D_GNU_SOURCE -DPPO_VERSION=\"$(VERSION)\" $(shell $(PKG_CONFIG) --cflags libsystemd)
 CFLAGS ?= -O2 -g
 CFLAGS += -std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow

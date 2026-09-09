@@ -20,7 +20,7 @@
 #include <unistd.h>
 
 #ifndef PPO_VERSION
-#define PPO_VERSION "0.1.0"
+#define PPO_VERSION "0.1.0-preview.1"
 #endif
 
 #define PPO_APP_NAME "Platform Profile"

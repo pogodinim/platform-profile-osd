@@ -1,0 +1,71 @@
+name: Compatibility or test report
+description: Share a successful test, a problem, or a comparison with built-in feedback.
+title: "[Testing] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping test this personal Linux-learning project.
+        Ordinary profile changes are enough; recovery stress tests are not required.
+        Please omit serial numbers and review diagnostics for personal information.
+  - type: input
+    id: version
+    attributes:
+      label: Preview version, tag, or commit
+      placeholder: v0.1.0-preview.1
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Laptop manufacturer and model
+      description: Please do not include a serial number.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Software environment
+      description: Distribution, kernel version, desktop/notification server, and Wayland or X11.
+    validations:
+      required: true
+  - type: textarea
+    id: profiles
+    attributes:
+      label: Profile choices and switching method
+      description: List the available choices and whether you used a hardware key, desktop control, asusctl, or another tool.
+    validations:
+      required: true
+  - type: dropdown
+    id: visual
+    attributes:
+      label: Popup result
+      options:
+        - One correct popup for each change
+        - Missing or incorrect popups
+        - Duplicate popups
+        - Could not run the notifier
+    validations:
+      required: true
+  - type: dropdown
+    id: audio
+    attributes:
+      label: Optional audio result
+      options:
+        - Not enabled or not tested
+        - Correct sound for each change
+        - Missing or incorrect sound
+        - Audio backend not available
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details and existing alternatives
+      description: Explain any problem, how to reproduce it, and whether your desktop/vendor tool already provides profile feedback or was running alongside this notifier.
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Optional diagnostics
+      description: Relevant --check output or a short error excerpt, reviewed for personal information.
+      render: text

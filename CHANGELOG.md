@@ -7,7 +7,18 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-09-09
+## [0.1.0-preview.1] - 2026-09-09
+
+### Changed
+
+- Introduced the project as a volunteer-testing preview and personal Linux
+  learning project by a chemical engineer.
+- Added a contribution guide, a compatibility-report form, and comparisons
+  with existing desktop/vendor feedback and standalone prior art.
+- Marked the program version as a preview. Runtime behavior is unchanged from
+  the tested private candidate below.
+
+## [0.1.0] - 2026-09-09 (unpublished private checkpoint)
 
 ### Added
 

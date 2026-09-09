@@ -1,7 +1,36 @@
 # platform-profile-osd
 
-**Cross-vendor Linux platform-profile notifications with optional
-profile-specific audio feedback.**
+**Volunteer testing preview: Linux profile-change notifications with optional
+sound. Compatibility reports and code review are welcome.**
+
+This is an experimental personal project, currently tested on one ASUS laptop
+with CachyOS and KDE Plasma. The public preview is `v0.1.0-preview.1`.
+
+## About this project
+
+I'm a chemical engineer, not a software developer. I started this project to
+gain practical experience with Linux and solve a small problem on my own
+laptop: noticing which performance profile is selected when I use its profile
+key. I'm sharing it to learn from other people's testing, feedback, and review.
+
+The project is a work in progress. Tests and recorded results are included,
+but hardware coverage and maintenance capacity are limited. Please treat this
+as an invitation to experiment and help improve it.
+
+## Volunteers welcome
+
+I'd especially appreciate reports from compatible non-ASUS laptops, other
+Linux distributions, and desktops or notification servers other than Plasma.
+Successful tests are useful too. Suggestions about existing tools that already
+solve your particular use case are also welcome.
+
+Start with ordinary profile-key or profile-control changes. See
+[how to contribute and report a test](CONTRIBUTING.md), or
+[open a compatibility report](https://github.com/pogodinim/platform-profile-osd/issues/new?template=compatibility_report.yml).
+The known suspend-audio failure on the development machine is documented in
+[TESTING.md](TESTING.md#live-recovery-acceptance--2026-09-09).
+
+## What it does
 
 `platform-profile-osd` watches the standard Linux
 `/sys/firmware/acpi/platform_profile` interface. It shows the active profile
@@ -11,6 +40,26 @@ for that profile.
 The daemon is small, read-only, event-driven, and runs as the logged-in user.
 By default it reports only actual profile changes; an optional setting can also
 show the current profile once at startup. It does not poll sysfs while idle.
+
+It uses standard desktop notifications; their appearance and visibility are
+controlled by the notification server. It does not draw a custom fullscreen OSD.
+
+## How this relates to existing tools
+
+Your desktop or vendor tool may already provide enough feedback. Check that
+before adding another notifier:
+
+| Existing option | Relevant behavior |
+| --- | --- |
+| [KDE Plasma's power-profile OSD](https://blogs.kde.org/2024/04/23/powerdevil-in-plasma-6.0-and-beyond/) | Plasma's profile-switching shortcut, such as Meta+B or the Battery key, can show its native OSD. An ASUS profile key need not invoke that same action. |
+| [ROG Control Center notifications](https://asus-linux.org/faq/general/desktop-notifications/) | ASUS tooling includes background notification facilities; coverage depends on the version and the type of change. Check whether it covers the profile changes you use. |
+| [profilesalertd](https://github.com/t-8ch/profilesalertd) | An existing standalone notifier for the same kernel interface; see the prior-art acknowledgement below. |
+
+My starting point was an ASUS M4 workflow and a small script that watched the
+kernel profile and played a sound. This project observes that kernel interface
+independently of the control that changes it, with configurable audio,
+diagnostics, and recovery tests. The idea is established; feedback on whether
+this particular implementation is useful is part of the testing invitation.
 
 ## Example behavior
 

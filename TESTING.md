@@ -3,6 +3,11 @@
 This file separates repeatable automated checks from tests that require a real
 graphical session, user service manager, audio server, or physical profile key.
 
+For the volunteer-testing preview, start with the basic checks and report guide
+in [CONTRIBUTING.md](CONTRIBUTING.md). The recovery records below document
+development work; a compatibility report does not require repeating disruptive
+tests.
+
 ## Automated
 
 Run:
