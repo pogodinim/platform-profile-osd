@@ -224,6 +224,9 @@ balanced = /home/me/Audio/My balanced sound.wav
 Custom and unknown profiles have no sound unless mapped explicitly or through
 `default`.
 
+Playback is limited to ten seconds, including custom WAV files. A stalled audio
+backend cannot leave a player running indefinitely; visual monitoring continues.
+
 ## CLI and diagnostics
 
 ```text
@@ -354,8 +357,10 @@ diagnostics, and simple user-local installation.
   `graphical-session.target`; XDG autostart is the fallback.
 - Notification appearance and timeout policy are ultimately controlled by the
   user's notification server.
-- Recovery after notification-server, session-bus, or PipeWire restarts,
-  suspend/resume, and live kernel-interface removal has not yet been validated.
+- Plasma notification-server and PipeWire recovery passed on the test host.
+  Suspend/resume preserved notifications, but audio failed with kernel HDA
+  controller/codec errors. Live session-bus restart, graphical-session target
+  stop/start, and kernel profile-interface removal remain unvalidated.
   See [untested recovery scenarios](TESTING.md#recovery-scenarios-not-yet-validated).
 - Only the hardware listed above has been tested by this project so far.
 

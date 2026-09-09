@@ -9,6 +9,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Limited optional playback to ten seconds so a stalled audio backend cannot
+  leave permanent `pw-play` children; added timeout and recovery regression tests.
 - Retried the current notification once after a broken D-Bus connection, so an
   idle bus restart no longer loses the first subsequent profile notification.
   Added isolated notification-service and D-Bus recovery regression tests.

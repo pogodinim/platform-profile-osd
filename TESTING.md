@@ -30,6 +30,8 @@ Coverage includes:
 - isolated notification-service and D-Bus recovery using the production
   notification callback, including first-send recovery and timeout handling;
 - missing `pw-play` and missing mapped-sound CLI behavior;
+- bounded playback lifetime, asynchronous child reaping, and subsequent audio
+  recovery using a fake backend;
 - shell syntax checks for every maintained script; and
 - validation of the maintained XDG desktop entry and systemd user unit.
 
@@ -85,8 +87,10 @@ Record the kernel, desktop, session type, and exposed choices before testing.
 - [x] missing individual sound file
 - [x] valid custom sound mapping, including a path with spaces
 - [x] graceful synthetic unknown-profile presentation
-- [ ] notification daemon restart/recovery
-- [ ] PipeWire restart/recovery
+- [x] notification daemon restart/recovery
+- [x] PipeWire restart/recovery
+- [x] suspend/resume visual feedback
+- [ ] suspend/resume audio feedback (host HDA/codec failure)
 - [x] user-service start, unexpected-failure restart, and stop
 - [x] reboot/login automatic startup and physical profile-key acceptance
 - [ ] graphical-session target start/stop relationship
@@ -376,6 +380,39 @@ counts. All 11 installed/preserved files retained their hashes, modes, and
 modification times, and no private test processes remained. The installed
 binary was not replaced. Live recovery gaps remain listed below.
 
+## Live recovery acceptance — 2026-09-09
+
+Installed the verified `ce69511` build with automatic rollback on installation
+failure and backups of all 12 existing installation/legacy files. Only the
+intended executable's contents changed. The new daemon ran as PID `62987`,
+with one D-Bus sender and zero restarts throughout the following checks.
+
+| Check | Result |
+| --- | --- |
+| Normal physical M4 changes | Pass: `Quiet → Balanced → Performance` calls captured; user confirmed one popup and matching sound for each |
+| PipeWire outage | Pass: stopped PipeWire, its PulseAudio service, WirePlumber, and both activation sockets under an automatic restoration guard; Quiet popup remained visible, audio was absent, and a playback-failure warning was logged without stopping the notifier |
+| PipeWire restoration | Pass: services restarted with new PIDs; the user confirmed matching popups and sounds on subsequent profile changes, without a notifier restart |
+| Plasma notification-server restart | Pass: shell PID changed from `1640` to `64465`, and its notification-service owner changed; the user confirmed the first and following profile changes each produced a popup and matching sound |
+| Suspend/resume visual feedback | Pass: `s2idle` suspend/resume recorded by systemd, boot ID unchanged, same notifier PID with zero restarts, and user-confirmed popups after waking |
+| Suspend/resume audio | Fail on this host: user reported no sound; direct `pw-play` also timed out. The kernel logged `CORB reset timeout#2` and amplifier errors, and ALSA's playback pointer did not advance |
+
+This host uses `SYSTEMD_SLEEP_FREEZE_USER_SESSIONS=0`; that existing system
+setting was not changed. The suspend test preserved the application session.
+
+Audio failure also exposed an application issue: eleven stalled `pw-play`
+children accumulated. Only those notifier-owned children were terminated.
+Restarting audio services did not recover the device. A user-run, targeted
+audio-controller unbind/rebind also failed; the kernel then reported
+`no codecs initialized` and PipeWire exposed Dummy Output. Reboot recovery and
+post-reboot audible acceptance remain pending; no audio-resume pass is claimed.
+
+Playback now runs with a child-only, one-shot ten-second alarm that survives
+`exec`. The daemon gains no periodic timer. Tests use a one-second limit and
+verify synchronous timeout, asynchronous return and reaping, inherited blocked
+or ignored alarm handling, successful later playback, and missing executable
+errors. Full automated tests, GCC static analysis, and Clang address/undefined-
+behavior sanitizer tests passed (leak detection disabled).
+
 ## Recovery scenarios not yet validated
 
 The following remain explicit validation gaps. Successful startup, normal
@@ -385,11 +422,9 @@ unchecked until the actual scenarios are exercised and recorded.
 
 | Scenario | Existing evidence and remaining check |
 | --- | --- |
-| Notification server crash/restart | Private mock-server recovery passed above. Actual Plasma restart and visible popup recovery remain untested. |
 | Session D-Bus disconnect/restart | Private-bus loss/restoration and first-send recovery passed above with a persistent client. Actual desktop session-bus restart and full-daemon survival remain untested. |
-| PipeWire restart/recovery | Missing `pw-play`, missing sounds, and an unavailable remote were non-fatal in earlier tests. Verify actual playback failure during a PipeWire restart and matching audio on subsequent profile changes after recovery. |
 | Deliberate stop/start of `graphical-session.target` | Transient `PartOf=` tests and real boot/shutdown logs passed. Explicitly stopping and restarting the real graphical target in a live session was not tested; it can disrupt desktop applications. |
-| Suspend/resume | Verify the watcher, notification connection, and optional audio after resume, including the first profile change. No suspend/resume acceptance test was performed. |
+| Suspend/resume audio | Visual recovery passed, but this host's HDA/codec failed and audio did not recover. See the failed live acceptance result above. |
 | Kernel profile-interface removal/recreation | Missing files are covered by automated tests. Live driver reset or sysfs removal/recreation, followed by restoration of monitoring and any systemd restart-limit effects, has not been tested. |
 
 Schedule disruptive desktop/audio recovery tests separately when other work

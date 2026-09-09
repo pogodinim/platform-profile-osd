@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <poll.h>
-#include <spawn.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -31,7 +30,9 @@
 #define PPO_DBUS_TIMEOUT_USEC (2ULL * 1000ULL * 1000ULL)
 #define PPO_LOCK_FILENAME "platform-profile-osd.lock"
 
-extern char **environ;
+#ifndef PPO_AUDIO_TIMEOUT_SECONDS
+#define PPO_AUDIO_TIMEOUT_SECONDS 10
+#endif
 
 struct app_paths {
     char profile[PATH_MAX];
@@ -408,25 +409,63 @@ static int notifier_send(struct notifier *notifier, const char *body,
 
 static int spawn_audio(const char *path, int wait_for_exit)
 {
-    posix_spawn_file_actions_t actions;
+    int error_pipe[2];
+    int exec_error = 0;
     pid_t child;
     char *const arguments[] = {"pw-play", "--", (char *)path, NULL};
     int result;
+    ssize_t count;
 
-    result = posix_spawn_file_actions_init(&actions);
-    if (result != 0)
-        return -result;
-    result = posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO,
-                                              "/dev/null", O_WRONLY, 0);
-    if (result == 0)
-        result = posix_spawn_file_actions_addopen(&actions, STDERR_FILENO,
-                                                  "/dev/null", O_WRONLY, 0);
-    if (result == 0)
-        result = posix_spawnp(&child, "pw-play", &actions, NULL, arguments,
-                              environ);
-    posix_spawn_file_actions_destroy(&actions);
-    if (result != 0)
-        return -result;
+    if (pipe2(error_pipe, O_CLOEXEC) < 0)
+        return -errno;
+    child = fork();
+    if (child < 0) {
+        result = -errno;
+        close(error_pipe[0]);
+        close(error_pipe[1]);
+        return result;
+    }
+    if (child == 0) {
+        struct sigaction action = { .sa_handler = SIG_DFL };
+        sigset_t signals;
+        int null_fd;
+
+        close(error_pipe[0]);
+        sigemptyset(&action.sa_mask);
+        sigemptyset(&signals);
+        sigaddset(&signals, SIGALRM);
+        if (sigaction(SIGALRM, &action, NULL) < 0 ||
+            sigprocmask(SIG_UNBLOCK, &signals, NULL) < 0)
+            goto child_failed;
+        null_fd = open("/dev/null", O_WRONLY | O_CLOEXEC);
+        if (null_fd < 0)
+            goto child_failed;
+        if (dup2(null_fd, STDOUT_FILENO) < 0 ||
+            dup2(null_fd, STDERR_FILENO) < 0)
+            goto child_failed;
+        if (null_fd > STDERR_FILENO)
+            close(null_fd);
+        /* The one-shot alarm survives exec and belongs only to this player.
+         * A stalled backend must not accumulate permanent audio processes. */
+        alarm(PPO_AUDIO_TIMEOUT_SECONDS);
+        execvp(arguments[0], arguments);
+child_failed:
+        exec_error = errno;
+        count = write(error_pipe[1], &exec_error, sizeof(exec_error));
+        (void)count;
+        _exit(127);
+    }
+    close(error_pipe[1]);
+    do {
+        count = read(error_pipe[0], &exec_error, sizeof(exec_error));
+    } while (count < 0 && errno == EINTR);
+    result = count < 0 ? -errno : count > 0 ? -exec_error : 0;
+    close(error_pipe[0]);
+    if (result < 0) {
+        if (wait_for_exit)
+            while (waitpid(child, NULL, 0) < 0 && errno == EINTR) {}
+        return result;
+    }
     if (!wait_for_exit)
         return 0;
 
@@ -434,6 +473,8 @@ static int spawn_audio(const char *path, int wait_for_exit)
         if (errno != EINTR)
             return -errno;
     }
+    if (WIFSIGNALED(result) && WTERMSIG(result) == SIGALRM)
+        return -ETIMEDOUT;
     if (!WIFEXITED(result) || WEXITSTATUS(result) != 0)
         return -EIO;
     return 0;
