@@ -35,8 +35,16 @@ autostart_file=$config_home/autostart/platform-profile-osd.desktop
 config_dir=$config_home/platform-profile-osd
 config_file=$config_dir/config.ini
 
-if command -v systemctl >/dev/null 2>&1; then
-    systemctl --user disable --now platform-profile-osd.service >/dev/null 2>&1 || true
+manage_service=false
+if [[ -e "$service_file" ]] && command -v systemctl >/dev/null 2>&1; then
+    # A temporary HOME/XDG_CONFIG_HOME does not isolate the session bus.
+    # Only stop a unit loaded from this installation's actual service file.
+    loaded_service=$(systemctl --user show platform-profile-osd.service \
+        --property=FragmentPath --value 2>/dev/null) || loaded_service=
+    if [[ -n "$loaded_service" && "$service_file" -ef "$loaded_service" ]]; then
+        systemctl --user disable --now platform-profile-osd.service
+        manage_service=true
+    fi
 fi
 
 rm -f -- "$service_file"
@@ -59,7 +67,7 @@ else
     printf 'Preserved user configuration (if present): %s\n' "$config_file"
 fi
 
-if command -v systemctl >/dev/null 2>&1; then
+if [[ "$manage_service" == true ]]; then
     systemctl --user daemon-reload >/dev/null 2>&1 || true
 fi
 

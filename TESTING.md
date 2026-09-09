@@ -25,6 +25,8 @@ Coverage includes:
 - rejection of conflicting CLI actions;
 - startup-notification and audio defaults;
 - daemon-only single-instance locking while read-only CLI actions remain usable;
+- uninstaller service ownership, configuration/unrelated-file preservation,
+  and refusal to remove files after an owned service fails to stop;
 - missing `pw-play` and missing mapped-sound CLI behavior;
 - shell syntax checks for every maintained script; and
 - validation of the maintained XDG desktop entry and systemd user unit.
@@ -37,8 +39,11 @@ They do not claim that regular files reproduce kernfs `EPOLLPRI` behavior.
 Installer/uninstaller tests use temporary `HOME`, `XDG_CONFIG_HOME`, and
 `XDG_DATA_HOME` directories. They verify a first install, an idempotent second
 install, exact-file removal, preservation of user configuration, and complete
-configuration removal. They never target the live installation during project
-development.
+configuration removal. A temporary `systemctl` wrapper permits diagnostics but
+rejects and records any attempted service-manager mutation. The tests also
+check that a staged service file cannot make a desktop-method reinstall stop
+another installation's service. They never target the live installation during
+project development.
 
 Run this test from a compatible graphical session:
 
@@ -293,6 +298,38 @@ Documented hardware/software versions, test dates, process IDs, and the GitHub
 account identity remain. This was a heuristic local review, not credential
 validation; unreachable Git objects and remote pull-request refs were outside
 scope. Repository visibility and release publication are separate steps.
+
+## Final pre-release review — 2026-09-09
+
+Reviewed the C runtime, configuration parser, installer/uninstaller, test
+scripts, service/autostart entries, CI workflow, release metadata, and asset
+packaging. Found and reproduced one installation-isolation bug with a fake
+service manager: uninstalling a temporary-home installation still attempted
+to disable the live service. Desktop-method reinstall had the same issue when
+a staged service file existed.
+
+Both paths now compare the manager's `FragmentPath` with the target service
+file before controlling the unit. A failed stop of an owned service aborts
+removal. The new automated regression suite covers absent, unrelated, owned,
+and symlinked unit files, an unavailable manager, and a failed service stop.
+Staged installer tests now reject all manager mutations at the command boundary.
+
+Verified from a fresh local clone of `69d24ae` with these review fixes applied:
+
+| Check | Result |
+| --- | --- |
+| GCC build and `make -j4 test` | Pass, including the new uninstaller regression suite |
+| Temporary-home install/reinstall/uninstall | Pass; configuration and unrelated files preserved; no manager mutation attempted |
+| Isolated transient service lifecycle | Pass: start, duplicate rejection, failure restart, `PartOf=` stop, and lock release |
+| GCC `-fanalyzer -Werror` build | Pass with no diagnostics |
+| Clang `-Werror` with AddressSanitizer and UndefinedBehaviorSanitizer | Full `make test` passed; leak detection disabled for compatibility with the test environment |
+| Read-only `--check` | Kernel interface, notification API, configured audio files/backend, and runtime directory available |
+| Packaging | Relative Markdown file links resolve; version constants agree on `0.1.0`; all three WAV files are valid 48 kHz stereo 16-bit PCM |
+| Working installation | Same enabled/active daemon, PID `1879`, start timestamp, and zero restarts; all 11 preserved-file hashes, modes, and modification times unchanged |
+
+Physical popup/audio and reboot acceptance remain supported by the September 8
+results. The recovery scenarios below remain untested. The changelog release
+date is still provisional; visibility, tagging, and publication remain pending.
 
 ## Recovery scenarios not yet validated
 

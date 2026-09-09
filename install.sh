@@ -159,11 +159,21 @@ case "$method" in
         install -d -m 0755 "$autostart_dir"
         install -m 0644 "$project_dir/autostart/platform-profile-osd.desktop" \
             "$autostart_dir/platform-profile-osd.desktop"
-        if [[ -e "$service_dir/platform-profile-osd.service" ]] &&
-           command -v systemctl >/dev/null 2>&1; then
-            systemctl --user disable --now platform-profile-osd.service >/dev/null 2>&1 || true
+        if [[ -e "$service_dir/platform-profile-osd.service" ]]; then
+            manage_service=false
+            if command -v systemctl >/dev/null 2>&1; then
+                loaded_service=$(systemctl --user show platform-profile-osd.service \
+                    --property=FragmentPath --value 2>/dev/null) || loaded_service=
+                if [[ -n "$loaded_service" && \
+                      "$service_dir/platform-profile-osd.service" -ef "$loaded_service" ]]; then
+                    systemctl --user disable --now platform-profile-osd.service
+                    manage_service=true
+                fi
+            fi
             rm -f -- "$service_dir/platform-profile-osd.service"
-            systemctl --user daemon-reload >/dev/null 2>&1 || true
+            if [[ "$manage_service" == true ]]; then
+                systemctl --user daemon-reload >/dev/null 2>&1 || true
+            fi
         fi
         ;;
     none)

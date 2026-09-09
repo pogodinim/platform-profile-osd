@@ -288,9 +288,14 @@ From the source tree:
 ./uninstall.sh
 ```
 
-The script stops/disables the project user service and removes only the exact
-binary, service, autostart file, example configuration, and bundled sound files
-installed by this project. It uses `rmdir` only for directories that are empty.
+The script stops/disables the project user service only when the manager's
+loaded unit belongs to the installation being removed. An installation under
+another home/configuration directory does not control that service. If stopping
+an owned service fails, removal stops before deleting installed files.
+
+It removes only the exact binary, service, autostart file, example
+configuration, and bundled sound files installed by this project. It uses
+`rmdir` only for directories that are empty.
 
 User configuration is preserved. Remove it explicitly with:
 

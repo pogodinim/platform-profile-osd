@@ -13,7 +13,7 @@ SOURCES := src/main.c src/config.c src/profile.c
 OBJECTS := $(SOURCES:src/%.c=$(BUILD_DIR)/%.o)
 TEST_TARGET := $(BUILD_DIR)/test-unit
 TEST_BASH_SCRIPTS := install.sh uninstall.sh \
-	tests/test-install.sh tests/test-service.sh
+	tests/test-install.sh tests/test-service.sh tests/test-uninstall.sh
 TEST_SH_SCRIPTS := tests/test-cli.sh tests/test-systemd-unit.sh
 TEST_DESKTOP_FILES := autostart/platform-profile-osd.desktop
 TEST_SYSTEMD_UNITS := systemd/platform-profile-osd.service
@@ -37,6 +37,7 @@ $(TEST_TARGET): tests/test-unit.c src/config.c src/profile.c | $(BUILD_DIR)
 test: $(TARGET) $(TEST_TARGET)
 	$(TEST_TARGET)
 	sh tests/test-cli.sh $(TARGET)
+	bash tests/test-uninstall.sh
 	@for script in $(TEST_BASH_SCRIPTS); do \
 		printf 'Checking Bash syntax: %s\n' "$$script"; \
 		bash -n "$$script" || exit $$?; \
