@@ -46,10 +46,18 @@ Run this test from a compatible graphical session:
 ./tests/test-install.sh
 ```
 
-The service lifecycle test uses uniquely named transient user units. It tests
-start, `Restart=on-failure`, stop, and the same `PartOf=` relationship used for
-the graphical session without installing a service or stopping the real
-desktop target:
+The service lifecycle test requires a running user service manager, the real
+platform-profile sysfs interface, `flock`, and `timeout`. Build the binary first.
+Each run uses uniquely named transient user units and a private temporary
+`XDG_RUNTIME_DIR` for the daemon lock. The silent fixture disables notifications
+and audio, so the installed notifier can keep running during the test.
+
+It waits for the test daemon to hold its lock, checks duplicate rejection,
+`Restart=on-failure` after `SIGKILL`, and the same `PartOf=` stop relationship
+used for the graphical session. It also checks lock release on stop. Cleanup
+removes only that run's units and temporary directory; failures report the
+current stage and recent test-daemon journal entries. It does not install a
+service or stop the real desktop target:
 
 ```bash
 ./tests/test-service.sh
@@ -238,6 +246,53 @@ and preserved-file hashes after either switch. Keeping a renamed `.disabled`
 file inside the autostart directory is not sufficient on this host. This
 rehearsal verified the restored legacy entry's generated unit and live behavior;
 it did not include another login while the legacy configuration was restored.
+
+## Isolated service integration verification — 2026-09-09
+
+Reproduced the earlier exit status `4` while the installed notifier was active.
+The test daemon shared the installed daemon's `XDG_RUNTIME_DIR`, so it logged
+`another daemon instance is already running; exiting` and exited successfully.
+The test then failed its service-active check. This was a test-isolation issue.
+
+Updated `tests/test-service.sh` to give each run a private lock directory and
+unique unit names, wait for lock acquisition, bound the duplicate-process
+check, and clean up only its own units. The installed daemon was kept running.
+
+| Check | Result |
+| --- | --- |
+| Checkout service lifecycle test | Pass: startup, duplicate rejection, restart after `SIGKILL`, `PartOf=` stop, and lock release |
+| Fresh build and `make -j4 test` | Pass from a local clone of `fe34bf9` with the test/documentation changes applied; compilation, unit/CLI tests, shell syntax, desktop entry, and systemd-unit validation passed |
+| Two concurrent service tests from that fresh checkout | Both exited `0`, with distinct runtime directories, units, and daemon PIDs; each passed every lifecycle check |
+| Cleanup | All six units and all three runtime directories from the successful runs were removed |
+| Live notifier continuity | Remained enabled and active at PID `1879`, with the same start timestamp and zero restarts |
+| Preserved installation | All 11 legacy/new executable, configuration, service, desktop-entry, and sound files retained their SHA-256 hashes, modes, and modification times |
+
+The sandbox initially blocked the local sockets used by systemd unit
+validation; the complete fresh-build suite passed with host access. No profile
+change or desktop/audio-service restart was needed. These results close the
+service-integration verification gap; the recovery scenarios below remain
+untested.
+
+## Pre-publication privacy review — 2026-09-09
+
+Fetched the remote refs and reviewed the complete, non-shallow history through
+`fe34bf9`: four commits, 39 unique file-content objects, and 31 tracked paths,
+plus the pending service-test and documentation changes. The remote exposed
+only `main`, with no tags.
+
+Local Python standard-library checks covered credential and private-key
+patterns, high-entropy text tokens, contact addresses, home paths, network
+identifiers, sensitive filenames, and commit metadata. Candidate matches were
+reviewed: the template unit's `@autostart.service` suffix is not an email
+address, `/home/me` is a documentation example, and author/committer addresses
+use the configured GitHub noreply identity. The three WAV files contain only
+format and audio-data chunks.
+
+No secrets or unexpected personal identifiers were found within that scope.
+Documented hardware/software versions, test dates, process IDs, and the GitHub
+account identity remain. This was a heuristic local review, not credential
+validation; unreachable Git objects and remote pull-request refs were outside
+scope. Repository visibility and release publication are separate steps.
 
 ## Recovery scenarios not yet validated
 
