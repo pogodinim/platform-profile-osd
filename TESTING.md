@@ -403,8 +403,8 @@ Audio failure also exposed an application issue: eleven stalled `pw-play`
 children accumulated. Only those notifier-owned children were terminated.
 Restarting audio services did not recover the device. A user-run, targeted
 audio-controller unbind/rebind also failed; the kernel then reported
-`no codecs initialized` and PipeWire exposed Dummy Output. Reboot recovery and
-post-reboot audible acceptance remain pending; no audio-resume pass is claimed.
+`no codecs initialized` and PipeWire exposed Dummy Output. Reboot later restored
+audio, as recorded below; no audio-resume pass is claimed.
 
 Playback now runs with a child-only, one-shot ten-second alarm that survives
 `exec`. The daemon gains no periodic timer. Tests use a one-second limit and
@@ -412,6 +412,28 @@ verify synchronous timeout, asynchronous return and reaping, inherited blocked
 or ignored alarm handling, successful later playback, and missing executable
 errors. Full automated tests, GCC static analysis, and Clang address/undefined-
 behavior sanitizer tests passed (leak detection disabled).
+
+## Final reboot acceptance and release checkpoint — 2026-09-09
+
+Committed, pushed, and installed playback hardening as `30e38ce`. Its full
+automated suite and GitHub CI passed before the reboot. Backups and private
+test evidence were saved outside `/tmp`; repository visibility remained private
+during verification.
+
+Verified a new boot beginning at 14:42:03 CEST on Linux `7.2.3-1-cachyos`.
+The enabled notifier started automatically at 14:42:21 as PID `1863`, with
+zero restarts and no service errors. The physical Ryzen/ALC294 analog audio
+device returned and replaced Dummy Output without changing configuration.
+
+The user confirmed one popup and the matching audible sound for each physical
+M4 change through `Quiet → Balanced → Performance`. A filtered D-Bus monitor
+captured that sequence from sender `:1.76`, mapped to the installed notifier,
+with replacement IDs zero. Playback workers exited normally; none remained
+after the check. The final profile was `performance`.
+
+Reboot recovery and normal popup/audio acceptance passed with the hardened
+build. This does not resolve the host's failed suspend-audio test. The release
+retains that known limitation and the unvalidated edge cases listed below.
 
 ## Recovery scenarios not yet validated
 

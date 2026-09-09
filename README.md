@@ -56,7 +56,7 @@ on the kernel and vendor driver exposing this standard interface and emitting
 its sysfs change notification when the active profile changes.
 
 Tested on ASUS ROG Strix SCAR 17 G733PZ running CachyOS and KDE Plasma 6.7.4.
-The tested session used Wayland and Linux 7.2.2, with the choices
+The tested sessions used Wayland and Linux 7.2.2/7.2.3, with the choices
 `quiet balanced performance`.
 
 Other machines are potentially compatible when their Linux kernel exposes both
@@ -359,8 +359,9 @@ diagnostics, and simple user-local installation.
   user's notification server.
 - Plasma notification-server and PipeWire recovery passed on the test host.
   Suspend/resume preserved notifications, but audio failed with kernel HDA
-  controller/codec errors. Live session-bus restart, graphical-session target
-  stop/start, and kernel profile-interface removal remain unvalidated.
+  controller/codec errors; reboot restored audio. Live session-bus restart,
+  graphical-session target stop/start, and kernel profile-interface removal
+  remain unvalidated.
   See [untested recovery scenarios](TESTING.md#recovery-scenarios-not-yet-validated).
 - Only the hardware listed above has been tested by this project so far.
 

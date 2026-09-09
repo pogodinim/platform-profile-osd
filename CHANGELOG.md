@@ -7,20 +7,7 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Fixed
-
-- Limited optional playback to ten seconds so a stalled audio backend cannot
-  leave permanent `pw-play` children; added timeout and recovery regression tests.
-- Retried the current notification once after a broken D-Bus connection, so an
-  idle bus restart no longer loses the first subsequent profile notification.
-  Added isolated notification-service and D-Bus recovery regression tests.
-- Isolated service lifecycle tests from the installed notifier with private
-  runtime locks and unique transient units.
-- Prevented staged uninstalls and desktop-method reinstalls from stopping a
-  service belonging to another installation; added regression coverage and
-  protection against service-manager mutations in staged installer tests.
-
-## [0.1.0] - 2026-09-02
+## [0.1.0] - 2026-09-09
 
 ### Added
 
@@ -39,3 +26,16 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Defaulted startup notifications, optional audio, and notification replacement
   to disabled.
 - Clarified pre-install runtime audio versus bundled sounds in installer output.
+
+### Fixed
+
+- Limited optional playback to ten seconds so a stalled audio backend cannot
+  leave permanent `pw-play` children; added timeout and recovery regression tests.
+- Retried the current notification once after a broken D-Bus connection, so an
+  idle bus restart no longer loses the first subsequent profile notification.
+  Added isolated notification-service and D-Bus recovery regression tests.
+- Isolated service lifecycle tests from the installed notifier with private
+  runtime locks and unique transient units.
+- Prevented staged uninstalls and desktop-method reinstalls from stopping a
+  service belonging to another installation; added regression coverage and
+  protection against service-manager mutations in staged installer tests.
